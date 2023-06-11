@@ -63,6 +63,7 @@ module Shell =
     type Msg =
         | StartStop
         | NextGeneration
+        | Restart
 
     let init () =
         let rows = 50
@@ -78,6 +79,7 @@ module Shell =
 
     let update (msg: Msg) (state: State): State * Cmd<_> =
         match msg with
+        | Restart -> init ()
         | StartStop ->
             let cmd = if state.Running then Cmd.none else Cmd.ofMsg NextGeneration
             { state with Running = not state.Running }, cmd
@@ -91,7 +93,7 @@ module Shell =
                         )
                 let cmd =
                     Cmd.OfAsync.perform
-                        (fun () -> async { do! Async.Sleep 100 })
+                        (fun () -> async { do! Async.Sleep 400 })
                         ()
                         (fun () -> NextGeneration)
                 { state with Cells = updated; Generation = state.Generation + 1 }, cmd
@@ -101,9 +103,12 @@ module Shell =
         StackPanel.create [
 
             StackPanel.orientation Orientation.Vertical
+            StackPanel.horizontalAlignment HorizontalAlignment.Center
 
             StackPanel.children [
                 UniformGrid.create [
+
+                    UniformGrid.margin 5
 
                     UniformGrid.columns state.Columns
                     UniformGrid.rows state.Rows
@@ -129,12 +134,27 @@ module Shell =
                         ]
                     ]
 
-                Button.create [
-                    Button.content (if state.Running then "Stop" else "Start")
-                    Button.onClick (fun _ -> dispatch StartStop)
+                StackPanel.create [
+
+                    StackPanel.orientation Orientation.Horizontal
+                    StackPanel.horizontalAlignment HorizontalAlignment.Center
+                    StackPanel.margin 5
+
+                    StackPanel.children [
+                        Button.create [
+                            Button.content (if state.Running then "Stop" else "Start")
+                            Button.onClick (fun _ -> dispatch StartStop)
+                            ]
+
+                        Button.create [
+                            Button.content "Restart"
+                            Button.onClick (fun _ -> dispatch Restart)
+                            ]
+                        ]
                     ]
 
                 TextBlock.create [
+                    TextBlock.horizontalAlignment HorizontalAlignment.Center
                     TextBlock.text $"Generation {state.Generation}"
                     ]
                 ]
@@ -147,10 +167,10 @@ module Shell =
     type MainWindow() as this =
         inherit HostWindow()
         do
-            base.Title <- "Full App"
-            base.Width <- 800.0
+            base.Title <- "Game of Life"
+            base.Width <- 500.0
             base.Height <- 600.0
-            base.MinWidth <- 800.0
+            base.MinWidth <- 500.0
             base.MinHeight <- 600.0
 
             //this.VisualRoot.VisualRoot.Renderer.DrawFps <- true
