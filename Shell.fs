@@ -2,6 +2,7 @@ namespace GameOfLifeMvu
 
 module Shell =
 
+    open System
     open Elmish
     open Avalonia
     open Avalonia.Controls
@@ -13,29 +14,68 @@ module Shell =
     open Avalonia.FuncUI.Elmish
     open Avalonia.Controls.Primitives
     open Avalonia.Controls.Shapes
+    open Avalonia.Layout
+
+    type Cell =
+        | Dead
+        | Alive of age: int
+
+    let nextGeneration (cells: Cell [,]) (row: int, col: int) =
+        match cells.[row, col] with
+        | Dead -> Dead
+        | Alive age -> Alive (age + 1)
 
     type State = {
-        Rows: int
-        Columns: int
+        Generation: int
+        Running: bool
+        Cells: Cell [,]
         }
-
+        with
+        member this.Rows = this.Cells.GetLength(0)
+        member this.Columns = this.Cells.GetLength(1)
 
     type Msg =
+        | StartStop
         | NextGeneration
 
     let init () =
-        {
-            Rows = 100
-            Columns = 100
-        },
-        Cmd.none
+        let rows = 100
+        let cols = 100
+        let rng = Random()
+        let cells =
+            Array2D.init cols rows (fun row col ->
+                if rng.NextDouble() <= 0.8
+                then Dead
+                else Alive 0
+                )
+        { Cells = cells; Running = false; Generation = 0 }, Cmd.none
 
     let update (msg: Msg) (state: State): State * Cmd<_> =
         match msg with
-        | NextGeneration -> state, Cmd.none
+        | StartStop ->
+            let cmd = if state.Running then Cmd.none else Cmd.ofMsg NextGeneration
+            { state with Running = not state.Running }, cmd
+        | NextGeneration ->
+            if state.Running
+            then
+                let updated =
+                    state.Cells
+                    |> Array2D.mapi (fun row col _ ->
+                        nextGeneration state.Cells (row, col)
+                        )
+                let cmd =
+                    Cmd.OfAsync.perform
+                        (fun () -> async { do! Async.Sleep 100 })
+                        ()
+                        (fun () -> NextGeneration)
+                { state with Cells = updated; Generation = state.Generation + 1 }, cmd
+            else state, Cmd.none
 
     let view (state: State) (dispatch: Msg -> unit) =
         StackPanel.create [
+
+            StackPanel.orientation Orientation.Vertical
+
             StackPanel.children [
                 UniformGrid.create [
 
@@ -51,9 +91,25 @@ module Shell =
                                 Rectangle.create [
                                     Rectangle.width 5
                                     Rectangle.height 5
-                                    Rectangle.fill "pink"
+                                    Rectangle.fill (
+                                        match state.Cells.[row, col] with
+                                        | Dead -> "Black"
+                                        | Alive age ->
+                                            if age < 2
+                                            then "HotPink"
+                                            else "Green"
+                                        )
                                     ]
                         ]
+                    ]
+
+                Button.create [
+                    Button.content (if state.Running then "Stop" else "Start")
+                    Button.onClick (fun _ -> dispatch StartStop)
+                    ]
+
+                TextBlock.create [
+                    TextBlock.text $"Generation {state.Generation}"
                     ]
                 ]
             ]
