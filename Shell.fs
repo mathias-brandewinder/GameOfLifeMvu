@@ -4,12 +4,9 @@ module Shell =
 
     open System
     open Elmish
-    open Avalonia
     open Avalonia.Controls
-    open Avalonia.Input
     open Avalonia.FuncUI.DSL
     open Avalonia.FuncUI
-    open Avalonia.FuncUI.Builder
     open Avalonia.FuncUI.Hosts
     open Avalonia.FuncUI.Elmish
     open Avalonia.Controls.Primitives
@@ -20,10 +17,39 @@ module Shell =
         | Dead
         | Alive of age: int
 
+    let neighbors =
+        [
+            -1, -1
+            -1, 0
+            -1, 1
+            0, -1
+            0, 1
+            1, -1
+            1, 0
+            1, 1
+        ]
+
     let nextGeneration (cells: Cell [,]) (row: int, col: int) =
+        let isAlive (row, col) =
+            if row < 0 || col < 0 || row >= cells.GetLength(0) || col >= cells.GetLength(0)
+            then false
+            else cells.[row, col] <> Dead
+        let liveNeighbors =
+            neighbors
+            |> Seq.sumBy (fun (dx, dy) ->
+                if isAlive (row + dx, col + dy)
+                then 1
+                else 0
+                )
         match cells.[row, col] with
-        | Dead -> Dead
-        | Alive age -> Alive (age + 1)
+        | Dead ->
+            if liveNeighbors = 3
+            then Alive 0
+            else Dead
+        | Alive age ->
+            if liveNeighbors = 2 || liveNeighbors = 3
+            then Alive (age + 1)
+            else Dead
 
     type State = {
         Generation: int
@@ -39,8 +65,8 @@ module Shell =
         | NextGeneration
 
     let init () =
-        let rows = 100
-        let cols = 100
+        let rows = 50
+        let cols = 50
         let rng = Random()
         let cells =
             Array2D.init cols rows (fun row col ->
@@ -97,7 +123,7 @@ module Shell =
                                         | Alive age ->
                                             if age < 2
                                             then "HotPink"
-                                            else "Green"
+                                            else "Purple"
                                         )
                                     ]
                         ]
