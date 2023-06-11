@@ -11,19 +11,22 @@ module Shell =
     open Avalonia.FuncUI.Builder
     open Avalonia.FuncUI.Hosts
     open Avalonia.FuncUI.Elmish
+    open Avalonia.Controls.Primitives
+    open Avalonia.Controls.Shapes
 
     type State = {
         Rows: int
         Columns: int
         }
 
+
     type Msg =
         | NextGeneration
 
     let init () =
         {
-            Rows = 10
-            Columns = 10
+            Rows = 100
+            Columns = 100
         },
         Cmd.none
 
@@ -32,10 +35,25 @@ module Shell =
         | NextGeneration -> state, Cmd.none
 
     let view (state: State) (dispatch: Msg -> unit) =
-        DockPanel.create [
-            DockPanel.children [
-                TextBlock.create [
-                    TextBlock.text "TODO"
+        StackPanel.create [
+            StackPanel.children [
+                UniformGrid.create [
+
+                    UniformGrid.columns state.Columns
+                    UniformGrid.rows state.Rows
+
+                    UniformGrid.width (state.Columns * 5 |> float)
+                    UniformGrid.height (state.Rows * 5 |> float)
+
+                    UniformGrid.children [
+                        for row in 0 .. state.Rows - 1 do
+                            for col in 0 .. state.Columns - 1 do
+                                Rectangle.create [
+                                    Rectangle.width 5
+                                    Rectangle.height 5
+                                    Rectangle.fill "pink"
+                                    ]
+                        ]
                     ]
                 ]
             ]
