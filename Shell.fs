@@ -31,7 +31,7 @@ module Shell =
 
     let nextGeneration (cells: Cell [,]) (row: int, col: int) =
         let isAlive (row, col) =
-            if row < 0 || col < 0 || row >= cells.GetLength(0) || col >= cells.GetLength(0)
+            if row < 0 || col < 0 || row >= cells.GetLength(0) || col >= cells.GetLength(1)
             then false
             else cells.[row, col] <> Dead
         let liveNeighbors =
@@ -65,23 +65,45 @@ module Shell =
         | NextGeneration
         | Restart
 
+    type Configuration = {
+        Rows: int
+        Columns: int
+        CellSize: int
+        RefreshIntervalMilliseconds: int
+        }
+
+    let config = {
+        Rows = 50
+        Columns = 50
+        CellSize = 5
+        RefreshIntervalMilliseconds = 500
+        }
+
     let init () =
-        let rows = 50
-        let cols = 50
+
         let rng = Random()
         let cells =
-            Array2D.init cols rows (fun row col ->
+            Array2D.init config.Rows config.Columns (fun row col ->
                 if rng.NextDouble() <= 0.8
                 then Dead
                 else Alive 0
                 )
         { Cells = cells; Running = false; Generation = 0 }, Cmd.none
 
-    let update (msg: Msg) (state: State): State * Cmd<_> =
+    let waitAndUpdate =
+        Cmd.OfAsync.perform
+            (fun () -> async { do! Async.Sleep config.RefreshIntervalMilliseconds })
+            ()
+            (fun () -> NextGeneration)
+
+    let update (msg: Msg) (state: State): State * Cmd<Msg> =
         match msg with
         | Restart -> init ()
         | StartStop ->
-            let cmd = if state.Running then Cmd.none else Cmd.ofMsg NextGeneration
+            let cmd =
+                if state.Running
+                then Cmd.none
+                else Cmd.ofMsg NextGeneration
             { state with Running = not state.Running }, cmd
         | NextGeneration ->
             if state.Running
@@ -91,32 +113,31 @@ module Shell =
                     |> Array2D.mapi (fun row col _ ->
                         nextGeneration state.Cells (row, col)
                         )
-                let cmd =
-                    Cmd.OfAsync.perform
-                        (fun () -> async { do! Async.Sleep 400 })
-                        ()
-                        (fun () -> NextGeneration)
-                { state with Cells = updated; Generation = state.Generation + 1 }, cmd
+                { state with
+                    Cells = updated;
+                    Generation = state.Generation + 1
+                },
+                waitAndUpdate
             else state, Cmd.none
 
     let deadCell =
         Rectangle.create [
-            Rectangle.width 5.0
-            Rectangle.height 5.0
+            Rectangle.width config.CellSize
+            Rectangle.height config.CellSize
             Rectangle.fill "Black"
             ]
 
     let youngCell =
         Rectangle.create [
-            Rectangle.width 5.0
-            Rectangle.height 5.0
+            Rectangle.width config.CellSize
+            Rectangle.height config.CellSize
             Rectangle.fill "HotPink"
             ]
 
     let oldCell =
         Rectangle.create [
-            Rectangle.width 5.0
-            Rectangle.height 5.0
+            Rectangle.width config.CellSize
+            Rectangle.height config.CellSize
             Rectangle.fill "Purple"
             ]
 
@@ -135,8 +156,8 @@ module Shell =
                     UniformGrid.columns state.Columns
                     UniformGrid.rows state.Rows
 
-                    UniformGrid.width (state.Columns * 5 |> float)
-                    UniformGrid.height (state.Rows * 5 |> float)
+                    UniformGrid.width (state.Columns * config.CellSize |> float)
+                    UniformGrid.height (state.Rows * config.CellSize |> float)
 
                     UniformGrid.children [
                         for row in 0 .. state.Rows - 1 do
@@ -158,12 +179,12 @@ module Shell =
 
                     StackPanel.children [
                         Button.create [
-                            Button.content (if state.Running then "Stop" else "Start")
+                            Button.content (if state.Running then "Pause" else "Start")
                             Button.onClick (fun _ -> dispatch StartStop)
                             ]
 
                         Button.create [
-                            Button.content "Restart"
+                            Button.content "New"
                             Button.onClick (fun _ -> dispatch Restart)
                             ]
                         ]
