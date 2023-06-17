@@ -99,6 +99,27 @@ module Shell =
                 { state with Cells = updated; Generation = state.Generation + 1 }, cmd
             else state, Cmd.none
 
+    let deadCell =
+        Rectangle.create [
+            Rectangle.width 5.0
+            Rectangle.height 5.0
+            Rectangle.fill "Black"
+            ]
+
+    let youngCell =
+        Rectangle.create [
+            Rectangle.width 5.0
+            Rectangle.height 5.0
+            Rectangle.fill "HotPink"
+            ]
+
+    let oldCell =
+        Rectangle.create [
+            Rectangle.width 5.0
+            Rectangle.height 5.0
+            Rectangle.fill "Purple"
+            ]
+
     let view (state: State) (dispatch: Msg -> unit) =
         StackPanel.create [
 
@@ -106,6 +127,7 @@ module Shell =
             StackPanel.horizontalAlignment HorizontalAlignment.Center
 
             StackPanel.children [
+
                 UniformGrid.create [
 
                     UniformGrid.margin 5
@@ -119,18 +141,12 @@ module Shell =
                     UniformGrid.children [
                         for row in 0 .. state.Rows - 1 do
                             for col in 0 .. state.Columns - 1 do
-                                Rectangle.create [
-                                    Rectangle.width 5
-                                    Rectangle.height 5
-                                    Rectangle.fill (
-                                        match state.Cells.[row, col] with
-                                        | Dead -> "Black"
-                                        | Alive age ->
-                                            if age < 2
-                                            then "HotPink"
-                                            else "Purple"
-                                        )
-                                    ]
+                                match state.Cells.[row, col] with
+                                | Dead -> deadCell
+                                | Alive age ->
+                                    if age < 2
+                                    then youngCell
+                                    else oldCell
                         ]
                     ]
 
