@@ -3,12 +3,10 @@ namespace GameOfLifeMvu
 module Shell =
 
     open System
+    open System.Threading
     open Elmish
     open Avalonia.Controls
     open Avalonia.FuncUI.DSL
-    open Avalonia.FuncUI
-    open Avalonia.FuncUI.Hosts
-    open Avalonia.FuncUI.Elmish
     open Avalonia.Controls.Primitives
     open Avalonia.Controls.Shapes
     open Avalonia.Layout
@@ -68,15 +66,16 @@ module Shell =
     type Configuration = {
         Rows: int
         Columns: int
-        CellSize: int
         RefreshIntervalMilliseconds: int
         }
+        with
+        member this.CellSize =
+            (800.0 - 10.0) / float (max this.Rows this.Columns)
 
     let config = {
-        Rows = 50
-        Columns = 50
-        CellSize = 5
-        RefreshIntervalMilliseconds = 500
+        Rows = 250
+        Columns = 250
+        RefreshIntervalMilliseconds = 100
         }
 
     let init () =
@@ -89,12 +88,6 @@ module Shell =
                 else Alive 0
                 )
         { Cells = cells; Running = false; Generation = 0 }, Cmd.none
-
-    let waitAndUpdate =
-        Cmd.OfAsync.perform
-            (fun () -> async { do! Async.Sleep config.RefreshIntervalMilliseconds })
-            ()
-            (fun () -> NextGeneration)
 
     let update (msg: Msg) (state: State): State * Cmd<Msg> =
         match msg with
@@ -113,11 +106,22 @@ module Shell =
                     |> Array2D.mapi (fun row col _ ->
                         nextGeneration state.Cells (row, col)
                         )
+                let ctx = SynchronizationContext.Current
+                let cmd =
+                    Cmd.OfAsync.perform
+                        (fun () -> async {
+                            do! Async.Sleep config.RefreshIntervalMilliseconds
+                            do! Async.SwitchToContext ctx
+                            return Msg.NextGeneration
+                            }
+                        )
+                        ()
+                        id
                 { state with
                     Cells = updated;
                     Generation = state.Generation + 1
                 },
-                waitAndUpdate
+                cmd //Cmd.none
             else state, Cmd.none
 
     let deadCell =
@@ -156,8 +160,8 @@ module Shell =
                     UniformGrid.columns state.Columns
                     UniformGrid.rows state.Rows
 
-                    UniformGrid.width (state.Columns * config.CellSize |> float)
-                    UniformGrid.height (state.Rows * config.CellSize |> float)
+                    UniformGrid.width (float state.Columns * config.CellSize |> float)
+                    UniformGrid.height (float state.Rows * config.CellSize |> float)
 
                     UniformGrid.children [
                         for row in 0 .. state.Rows - 1 do
@@ -196,23 +200,3 @@ module Shell =
                     ]
                 ]
             ]
-
-    /// This is the main window of your application
-    /// you can do all sort of useful things here like setting heights and widths
-    /// as well as attaching your dev tools that can be super useful when developing with
-    /// Avalonia
-    type MainWindow() as this =
-        inherit HostWindow()
-        do
-            base.Title <- "Game of Life"
-            base.Width <- 500.0
-            base.Height <- 600.0
-            base.MinWidth <- 500.0
-            base.MinHeight <- 600.0
-
-            //this.VisualRoot.VisualRoot.Renderer.DrawFps <- true
-            //this.VisualRoot.VisualRoot.Renderer.DrawDirtyRects <- true
-
-            Elmish.Program.mkProgram init update view
-            |> Program.withHost this
-            |> Program.run

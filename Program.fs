@@ -1,31 +1,46 @@
 namespace GameOfLifeMvu
 
 open Avalonia
-open Avalonia.Controls.ApplicationLifetimes
-open Avalonia.FuncUI
 open Avalonia.Themes.Fluent
+open Elmish
+open Avalonia.FuncUI.Hosts
+open Avalonia.FuncUI
+open Avalonia.FuncUI.Elmish
+open Avalonia.Controls.ApplicationLifetimes
 
+type MainWindow() as this =
+    inherit HostWindow()
+    do
+        base.Title <- "Game of Life"
+        base.Width <- 800.0
+        base.Height <- 1000.0
+        base.MinWidth <- 800.0
+        base.MinHeight <- 1000.0
 
-/// This is your application you can ose the initialize method to load styles
-/// or handle Life Cycle events of your application
+        Elmish.Program.mkProgram Shell.init Shell.update Shell.view
+        |> Program.withHost this
+        |> Program.run
+
 type App() =
     inherit Application()
 
     override this.Initialize() =
-        this.Styles.Add (FluentTheme(baseUri = null, Mode = FluentThemeMode.Dark))
-        this.Styles.Load "avares://GameOfLifeMvu/Styles.xaml"
+        this.Styles.Add (FluentTheme())
+        this.RequestedThemeVariant <- Styling.ThemeVariant.Dark
 
     override this.OnFrameworkInitializationCompleted() =
         match this.ApplicationLifetime with
         | :? IClassicDesktopStyleApplicationLifetime as desktopLifetime ->
-            desktopLifetime.MainWindow <- Shell.MainWindow()
+            let mainWindow = MainWindow()
+            desktopLifetime.MainWindow <- mainWindow
         | _ -> ()
 
 module Program =
 
     [<EntryPoint>]
-    let main (args: string []) =
-        AppBuilder.Configure<App>()
+    let main(args: string[]) =
+        AppBuilder
+            .Configure<App>()
             .UsePlatformDetect()
             .UseSkia()
             .StartWithClassicDesktopLifetime(args)
