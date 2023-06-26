@@ -13,9 +13,9 @@ type MainWindow() as this =
     do
         base.Title <- "Game of Life"
         base.Width <- 800.0
-        base.Height <- 1000.0
+        base.Height <- 850.0
         base.MinWidth <- 800.0
-        base.MinHeight <- 1000.0
+        base.MinHeight <- 850.0
 
         Elmish.Program.mkProgram Shell.init Shell.update Shell.view
         |> Program.withHost this
