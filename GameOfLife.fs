@@ -1,6 +1,6 @@
 namespace GameOfLifeMvu
 
-module Shell =
+module GameOfLife =
 
     open System
     open System.Threading

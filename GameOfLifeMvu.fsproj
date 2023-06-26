@@ -3,17 +3,14 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
-    <Compile Include="Shell.fs" />
+    <Compile Include="GameOfLife.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="11.0.0-rc1.1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0-rc1.1" />
     <PackageReference Include="Avalonia.FuncUI" Version="1.0.0-rc1.1.1" />
     <PackageReference Include="Avalonia.FuncUI.Elmish" Version="1.0.0-rc1.1.1" />
   </ItemGroup>
-
 </Project>
